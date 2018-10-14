@@ -7,9 +7,14 @@ num_nodes = 1000
 explore_faction = 2.
 
 
-def calc_uct(node):
+def calc_uct(node, identity):
     #determine UTC rating of given node
-    return node.wins/node.visits + explore_faction*sqrt(log(node.parent.visits)/node.visits)
+    if identity == 'red':
+        wins = node.wins
+    else:
+        #reverse wins if blue because they are stored as wins for red
+        wins = node.wins*-1
+    return wins/node.visits + explore_faction*sqrt(log(node.parent.visits)/node.visits)
 
 
 def traverse_nodes(node, board, state, identity):
@@ -29,7 +34,7 @@ def traverse_nodes(node, board, state, identity):
     while current_node.child_nodes:
         next_node = (-1, None) #used to compare UCT ratings of nodes
         for child in current_node.child_nodes:
-            child_uct = calc_uct(child)
+            child_uct = calc_uct(child, identity)
             if child_uct > next_node[0]:
                 next_node = (child_uct, child)
         current_node = next_node[1]
