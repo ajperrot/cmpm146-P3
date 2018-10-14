@@ -61,9 +61,6 @@ def expand_leaf(node, board, state):
     return new_node
 
 
-    # Hint: return new_node
-
-
 def rollout(board, state):
     """ Given the state of the game, the rollout plays out the remainder randomly.
 
