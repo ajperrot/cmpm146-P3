@@ -69,7 +69,12 @@ def rollout(board, state):
         state:  The state of the game.
 
     """
-    pass
+    while not board.is_ended(state):
+        #choice selects a legal action at random
+        rand_action = choice(board.legal_actions(state))
+        #we follow the outcome of that action until the end
+        state = board.next_state(state, rand_action)
+    #i feel like we should return whether the state is a win or not, otherwise it doesn't make much sense
 
 
 def backpropagate(node, won):
@@ -80,7 +85,11 @@ def backpropagate(node, won):
         won:    An indicator of whether the bot won or lost the game.
 
     """
-    pass
+    node.visits += 1
+    node.wins += won #won should be -1 for loss, 0 for draw, 1 for win
+    while node.parent:
+        node.parent.visits +=1
+        node.parent.wins += won
 
 
 def think(board, state):
