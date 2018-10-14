@@ -52,7 +52,15 @@ def expand_leaf(node, board, state):
     Returns:    The added child node.
 
     """
-    pass
+    #choose first untried action
+    new_action = node.untried_actions.pop(0)
+    #add node based on that action
+    new_state = board.next_state(state, new_action)
+    new_node = MCTSNode(node, new_action, board.legal_actions(new_state))
+    node.child_nodes[new_action] = new_node
+    return new_node
+
+
     # Hint: return new_node
 
 
