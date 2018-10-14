@@ -6,6 +6,12 @@ from math import sqrt, log
 num_nodes = 1000
 explore_faction = 2.
 
+
+def calc_uct(node):
+    #determine UTC rating of given node
+    return node.wins/node.visits + explore_faction*sqrt(log(node.parent.visits)/node.visits)
+
+
 def traverse_nodes(node, board, state, identity):
     """ Traverses the tree until the end criterion are met.
 
@@ -16,10 +22,18 @@ def traverse_nodes(node, board, state, identity):
         identity:   The bot's identity, either 'red' or 'blue'.
 
     Returns:        A node from which the next stage of the search can proceed.
-
+   
     """
-    pass
-    # Hint: return leaf_node
+    #UCT based selection
+    current_node = node
+    while current_node.child_nodes:
+        next_node = (-1, None) #used to compare UCT ratings of nodes
+        for child in current_node.child_nodes:
+            child_uct = calc_uct(child)
+            if child_uct > next_node[0]:
+                next_node = (child_uct, child)
+        current_node = next_node[1]
+    return current_node #leaf found by taking highest UCT actions
 
 
 def expand_leaf(node, board, state):
