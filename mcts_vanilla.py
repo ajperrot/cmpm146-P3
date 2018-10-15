@@ -3,16 +3,17 @@ from mcts_node import MCTSNode
 from random import choice
 from math import sqrt, log, inf
 
-num_nodes = 100
+num_nodes = 1000
 explore_faction = 2.
 
 
 def calc_uct(node, identity):
+    node.visits += 1
     #determine UTC rating of given node
-    if identity == 'red':
+    if identity == 1:
         wins = node.wins
     else:
-        #reverse wins if blue because they are stored as wins for red
+        #reverse wins if blue because they are stored as wins for P1
         wins = node.wins*-1
     return wins/node.visits + explore_faction*sqrt(log(node.parent.visits)/node.visits)
 
@@ -24,7 +25,7 @@ def traverse_nodes(node, board, state, identity):
         node:       A tree node from which the search is traversing.
         board:      The game setup.
         state:      The state of the game.
-        identity:   The bot's identity, either 'red' or 'blue'.
+        identity:   The bot's identity, either 1 or 2.
 
     Returns:        A node from which the next stage of the search can proceed.
    
@@ -32,13 +33,14 @@ def traverse_nodes(node, board, state, identity):
     #UCT based selection
     current_node = node
     while current_node.child_nodes:
-        next_utc_node = (-10000, None) #used to compare UCT ratings of nodes
+        best_utc = -inf
+        next_node = None
         for _, child in current_node.child_nodes.items():
             child_uct = calc_uct(child, identity)
-            if child_uct > next_utc_node[0]:
-                next_utc_node = (child_uct, child)
-        current_node = next_utc_node[1]
-        state = board.next_state(state, next_utc_node[1].parent_action) #incrememnt state of sim
+            if child_uct > best_utc:
+                next_node = child
+        current_node = next_node
+        state = board.next_state(state, next_node.parent_action) #incrememnt state of sim
     #the description does not mention the state, but it is necessary
     return (current_node, state) #leaf found by taking highest UCT actions
 
@@ -54,15 +56,16 @@ def expand_leaf(node, board, state):
     Returns:    The added child node.
 
     """
-    #choose first untried action
     if node.untried_actions:
-        new_action = node.untried_actions.pop(0)
-        #add node based on that action
-        new_state = board.next_state(state, new_action)
-        new_node = MCTSNode(node, new_action, board.legal_actions(new_state))
-        #the description does not mention the state, but it is necessary
-        return (new_node, new_state)
+        #print("avalible actions")#test
+        new_nodes = []
+        for action in board.legal_actions(state):
+            new_state = board.next_state(state, action)
+            new_nodes.append(MCTSNode(node, action, board.legal_actions(new_state)))
+        next_node = choice(new_nodes) #select one of the new leaves at random to use
+        return next_node, new_nodes
     else:
+        #print("no untried actions")#test
         return (None, None)
 
 
@@ -80,7 +83,7 @@ def rollout(board, state):
         #we follow the outcome of that action until the end
         state = board.next_state(state, rand_action)
     #i feel like we should return whether the state is a win or not, otherwise it doesn't make much sense
-    return board.points_values(state)[1] #remember all point values are for 'red' or, player 1
+    return board.points_values(state)[1] #remember all point values are for player 1
 
 def backpropagate(node, won):
     """ Navigates the tree from a leaf node to the root, updating the win and visit count of each node along the path.
@@ -121,34 +124,43 @@ def think(board, state):
         # Do MCTS - This is all you!
         node, sampled_game = traverse_nodes(node, board, sampled_game, identity_of_bot)
         #note that we need to append the child when we call expand_leaf
-        new_node, new_game = expand_leaf(node, board, sampled_game)
-        if new_node:
-            sampled_game = new_game
-            node.child_nodes[new_node.parent_action] = new_node
+        next_node, new_nodes = expand_leaf(node, board, sampled_game)
+        if next_node:
+            sampled_game = board.next_state(sampled_game, next_node.parent_action)
+            for new_node in new_nodes:
+                node.child_nodes[new_node.parent_action] = new_node
+            node.child_nodes[next_node.parent_action] = next_node
+            node = next_node
             #update sampled_game state for rollout
             #simulate game from new node
             won = rollout(board, sampled_game)
             #update tree
         else:
-            new_node = node
             won = board.points_values(sampled_game)[1]
-        backpropagate(new_node, won)
+        backpropagate(node, won)
+
     # Return an action, typically the most frequently used action (from the root) or the action with the best
     # estimated win rate.
-    if identity_of_bot == 'red':
-        best_winrate = -inf
+    best_winrate = -inf
+    if identity_of_bot == 1:
         for action in board.legal_actions(state):
             if action in root_node.child_nodes:
+                #print("considering")#test of how many actions are considered
                 child = root_node.child_nodes[action]
-                if (child.wins/child.visits) > best_winrate:
+                child_winrate = child.wins/child.visits
+                if child_winrate > best_winrate:
                     best_action = action
+                    best_winrate = child_winrate
     #branch to account for negative blue winrates
     else:
-        best_winrate = inf
         for action in board.legal_actions(state):
             if action in root_node.child_nodes:
                 child = root_node.child_nodes[action]
-                if (child.wins/child.visits) < best_winrate:
+                child_winrate = (child.wins/child.visits)*-1
+                if child_winrate > best_winrate:
                     best_action = action
+                    best_winrate = child_winrate
 
+    #I think this is ok to leave in? rollout_bot does something similar
+    print("mcts vanilla #", identity_of_bot, "picking", best_action, "with winrate =", best_winrate)
     return best_action
