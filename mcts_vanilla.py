@@ -9,7 +9,7 @@ explore_faction = 2.
 
 def calc_uct(node, identity):
     node.visits += 1
-    #determine UTC rating of given node
+    #determine uct rating of given node
     if identity == 1:
         wins = node.wins
     else:
@@ -33,11 +33,11 @@ def traverse_nodes(node, board, state, identity):
     #UCT based selection
     current_node = node
     while current_node.child_nodes:
-        best_utc = -inf
+        best_uct = -inf
         next_node = None
         for _, child in current_node.child_nodes.items():
             child_uct = calc_uct(child, identity)
-            if child_uct > best_utc:
+            if child_uct > best_uct:
                 next_node = child
         current_node = next_node
         state = board.next_state(state, next_node.parent_action) #incrememnt state of sim
@@ -80,7 +80,7 @@ def rollout(board, state):
     while not board.is_ended(state):
         #choice selects a legal action at random
         rand_action = choice(board.legal_actions(state))
-        #we follow the outcome of that action until the end
+        #we follow the ouctome of that action until the end
         state = board.next_state(state, rand_action)
     #i feel like we should return whether the state is a win or not, otherwise it doesn't make much sense
     return board.points_values(state)[1] #remember all point values are for player 1
@@ -94,6 +94,7 @@ def backpropagate(node, won):
 
     """
     node.visits += 1
+    #Total score of the whole path to get to that node
     node.wins += won #won should be -1 for loss, 0 for draw, 1 for win
     while node.parent:
         node.parent.visits +=1
@@ -125,6 +126,7 @@ def think(board, state):
         node, sampled_game = traverse_nodes(node, board, sampled_game, identity_of_bot)
         #note that we need to append the child when we call expand_leaf
         next_node, new_nodes = expand_leaf(node, board, sampled_game)
+        #IF it is not a leaf, then game is not over
         if next_node:
             sampled_game = board.next_state(sampled_game, next_node.parent_action)
             for new_node in new_nodes:
@@ -154,6 +156,7 @@ def think(board, state):
     #branch to account for negative blue winrates
     else:
         for action in board.legal_actions(state):
+            #child_nodes is a dictionary
             if action in root_node.child_nodes:
                 child = root_node.child_nodes[action]
                 child_winrate = (child.wins/child.visits)*-1
