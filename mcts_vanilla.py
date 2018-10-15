@@ -1,9 +1,9 @@
 
 from mcts_node import MCTSNode
 from random import choice
-from math import sqrt, log
+from math import sqrt, log, inf
 
-num_nodes = 1000
+num_nodes = 100
 explore_faction = 2.
 
 
@@ -32,13 +32,15 @@ def traverse_nodes(node, board, state, identity):
     #UCT based selection
     current_node = node
     while current_node.child_nodes:
-        next_node = (-1, None) #used to compare UCT ratings of nodes
-        for child in current_node.child_nodes:
+        next_utc_node = (-10000, None) #used to compare UCT ratings of nodes
+        for _, child in current_node.child_nodes.items():
             child_uct = calc_uct(child, identity)
-            if child_uct > next_node[0]:
-                next_node = (child_uct, child)
-        current_node = next_node[1]
-    return current_node #leaf found by taking highest UCT actions
+            if child_uct > next_utc_node[0]:
+                next_utc_node = (child_uct, child)
+        current_node = next_utc_node[1]
+        state = board.next_state(state, next_utc_node[1].parent_action) #incrememnt state of sim
+    #the description does not mention the state, but it is necessary
+    return (current_node, state) #leaf found by taking highest UCT actions
 
 
 def expand_leaf(node, board, state):
@@ -53,12 +55,15 @@ def expand_leaf(node, board, state):
 
     """
     #choose first untried action
-    new_action = node.untried_actions.pop(0)
-    #add node based on that action
-    new_state = board.next_state(state, new_action)
-    new_node = MCTSNode(node, new_action, board.legal_actions(new_state))
-    node.child_nodes[new_action] = new_node
-    return new_node
+    if node.untried_actions:
+        new_action = node.untried_actions.pop(0)
+        #add node based on that action
+        new_state = board.next_state(state, new_action)
+        new_node = MCTSNode(node, new_action, board.legal_actions(new_state))
+        #the description does not mention the state, but it is necessary
+        return (new_node, new_state)
+    else:
+        return (None, None)
 
 
 def rollout(board, state):
@@ -75,7 +80,7 @@ def rollout(board, state):
         #we follow the outcome of that action until the end
         state = board.next_state(state, rand_action)
     #i feel like we should return whether the state is a win or not, otherwise it doesn't make much sense
-
+    return board.points_values(state)[1] #remember all point values are for 'red' or, player 1
 
 def backpropagate(node, won):
     """ Navigates the tree from a leaf node to the root, updating the win and visit count of each node along the path.
@@ -90,6 +95,7 @@ def backpropagate(node, won):
     while node.parent:
         node.parent.visits +=1
         node.parent.wins += won
+        node = node.parent
 
 
 def think(board, state):
@@ -113,7 +119,36 @@ def think(board, state):
         node = root_node
 
         # Do MCTS - This is all you!
-
+        node, sampled_game = traverse_nodes(node, board, sampled_game, identity_of_bot)
+        #note that we need to append the child when we call expand_leaf
+        new_node, new_game = expand_leaf(node, board, sampled_game)
+        if new_node:
+            sampled_game = new_game
+            node.child_nodes[new_node.parent_action] = new_node
+            #update sampled_game state for rollout
+            #simulate game from new node
+            won = rollout(board, sampled_game)
+            #update tree
+        else:
+            new_node = node
+            won = board.points_values(sampled_game)[1]
+        backpropagate(new_node, won)
     # Return an action, typically the most frequently used action (from the root) or the action with the best
     # estimated win rate.
-    return None
+    if identity_of_bot == 'red':
+        best_winrate = -inf
+        for action in board.legal_actions(state):
+            if action in root_node.child_nodes:
+                child = root_node.child_nodes[action]
+                if (child.wins/child.visits) > best_winrate:
+                    best_action = action
+    #branch to account for negative blue winrates
+    else:
+        best_winrate = inf
+        for action in board.legal_actions(state):
+            if action in root_node.child_nodes:
+                child = root_node.child_nodes[action]
+                if (child.wins/child.visits) < best_winrate:
+                    best_action = action
+
+    return best_action
