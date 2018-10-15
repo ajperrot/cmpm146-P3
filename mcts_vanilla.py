@@ -8,14 +8,14 @@ explore_faction = 2.
 
 
 def calc_uct(node, identity):
-    node.visits += 1
+    visits = node.visits + 1
     #determine uct rating of given node
     if identity == 1:
         wins = node.wins
     else:
         #reverse wins if blue because they are stored as wins for P1
         wins = node.wins*-1
-    return wins/node.visits + explore_faction*sqrt(log(node.parent.visits)/node.visits)
+    return wins/visits + explore_faction*sqrt(log(node.parent.visits)/visits)
 
 
 def traverse_nodes(node, board, state, identity):
@@ -57,7 +57,7 @@ def expand_leaf(node, board, state):
 
     """
     if node.untried_actions:
-        #print("avalible actions")#test
+        print("avalible actions @", node)#test
         new_nodes = []
         for action in board.legal_actions(state):
             new_state = board.next_state(state, action)
@@ -65,7 +65,7 @@ def expand_leaf(node, board, state):
         next_node = choice(new_nodes) #select one of the new leaves at random to use
         return next_node, new_nodes
     else:
-        #print("no untried actions")#test
+        print("no untried actions @", node)#test
         return (None, None)
 
 
@@ -145,24 +145,15 @@ def think(board, state):
     # estimated win rate.
     best_winrate = -inf
     if identity_of_bot == 1:
-        for action in board.legal_actions(state):
-            if action in root_node.child_nodes:
-                #print("considering")#test of how many actions are considered
-                child = root_node.child_nodes[action]
-                child_winrate = child.wins/child.visits
-                if child_winrate > best_winrate:
-                    best_action = action
-                    best_winrate = child_winrate
-    #branch to account for negative blue winrates
+        sign = 1
     else:
-        for action in board.legal_actions(state):
-            #child_nodes is a dictionary
-            if action in root_node.child_nodes:
-                child = root_node.child_nodes[action]
-                child_winrate = (child.wins/child.visits)*-1
-                if child_winrate > best_winrate:
-                    best_action = action
-                    best_winrate = child_winrate
+        sign = -1
+    for action in root_node.untried_actions:
+        child = root_node.child_nodes[action]
+        child_winrate = (child.wins/child.visits)*sign
+        if child_winrate > best_winrate:
+            best_action = action
+            best_winrate = child_winrate
 
     #I think this is ok to leave in? rollout_bot does something similar
     print("mcts vanilla #", identity_of_bot, "picking", best_action, "with winrate =", best_winrate)
