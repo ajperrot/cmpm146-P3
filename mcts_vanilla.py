@@ -6,16 +6,14 @@ from math import sqrt, log, inf
 num_nodes = 1000
 explore_faction = 2.
 
+id_coeff = [1, -1]
+
 
 def calc_uct(node, identity):
-    visits = node.visits + 1
+    node.visits += 1
     #determine uct rating of given node
-    if identity == 1:
-        wins = node.wins
-    else:
-        #reverse wins if blue because they are stored as wins for P1
-        wins = node.wins*-1
-    return wins/visits + explore_faction*sqrt(log(node.parent.visits)/visits)
+    wins = node.wins*id_coeff[identity]
+    return wins/node.visits + explore_faction*sqrt(log(node.parent.visits)/node.visits)
 
 
 def traverse_nodes(node, board, state, identity):
@@ -32,7 +30,7 @@ def traverse_nodes(node, board, state, identity):
     """
     #UCT based selection
     current_node = node
-    while current_node.child_nodes:
+    while not current_node.untried_actions:
         best_uct = -inf
         next_node = None
         for _, child in current_node.child_nodes.items():
@@ -40,9 +38,9 @@ def traverse_nodes(node, board, state, identity):
             if child_uct > best_uct:
                 next_node = child
         current_node = next_node
-        state = board.next_state(state, next_node.parent_action) #incrememnt state of sim
+        sampled_game = board.next_state(state, next_node.parent_action) #incrememnt state of sim
     #the description does not mention the state, but it is necessary
-    return (current_node, state) #leaf found by taking highest UCT actions
+    return (current_node) #leaf found by taking highest UCT actions
 
 
 def expand_leaf(node, board, state):
@@ -56,8 +54,16 @@ def expand_leaf(node, board, state):
     Returns:    The added child node.
 
     """
+
+    new_action = node.untried_actions.pop(0)
+    state = board.next_state(state, new_action)
+    new_node = MCTSNode(node, new_action, board.legal_actions(state))
+    node.child_nodes[new_action] = new_node
+    return new_node
+
+
     if node.untried_actions:
-        print("avalible actions @", node)#test
+        #print("avalible actions @", node)#test
         new_nodes = []
         for action in board.legal_actions(state):
             new_state = board.next_state(state, action)
@@ -65,7 +71,7 @@ def expand_leaf(node, board, state):
         next_node = choice(new_nodes) #select one of the new leaves at random to use
         return next_node, new_nodes
     else:
-        print("no untried actions @", node)#test
+        #print("no untried actions @", node)#test
         return (None, None)
 
 
@@ -123,22 +129,21 @@ def think(board, state):
         node = root_node
 
         # Do MCTS - This is all you!
-        node, sampled_game = traverse_nodes(node, board, sampled_game, identity_of_bot)
-        #note that we need to append the child when we call expand_leaf
-        next_node, new_nodes = expand_leaf(node, board, sampled_game)
-        #IF it is not a leaf, then game is not over
-        if next_node:
-            sampled_game = board.next_state(sampled_game, next_node.parent_action)
-            for new_node in new_nodes:
-                node.child_nodes[new_node.parent_action] = new_node
-            node.child_nodes[next_node.parent_action] = next_node
-            node = next_node
-            #update sampled_game state for rollout
-            #simulate game from new node
-            won = rollout(board, sampled_game)
-            #update tree
-        else:
-            won = board.points_values(sampled_game)[1]
+        print("before state =", sampled_game)#test
+        selected_node = traverse_nodes(node, board, sampled_game, identity_of_bot)
+        node = selected_node
+        select_actions = []
+        while node.parent:
+            select_actions.append(node.parent_action)
+            node = node.parent
+        select_actions.reverse()
+        for action in select_actions:
+            sampled_game = board.next_state(sampled_game, action)
+        node = expand_leaf(node, board, sampled_game)
+        # sampled_game = board.next_state(sampled_game, next_node.parent_action)
+        # simulate game from new node
+        won = rollout(board, sampled_game)
+        # update tree
         backpropagate(node, won)
 
     # Return an action, typically the most frequently used action (from the root) or the action with the best
@@ -148,7 +153,7 @@ def think(board, state):
         sign = 1
     else:
         sign = -1
-    for action in root_node.untried_actions:
+    for action in board.legal_actions(state):
         child = root_node.child_nodes[action]
         child_winrate = (child.wins/child.visits)*sign
         if child_winrate > best_winrate:
