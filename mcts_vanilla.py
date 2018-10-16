@@ -30,23 +30,16 @@ def traverse_nodes(node, board, state, identity):
     #UCT based selection
     current_node = node
     while not current_node.untried_actions and current_node.child_nodes:
-        #print("going deeper with", current_node)
-        #print("it has", current_node.untried_actions)
         best_uct = -inf
         next_node = None
         for _, child in current_node.child_nodes.items():
-            #print("child", child)
-            #print("select child untried", child.untried_actions)
             child.visits += 1
             child_uct = calc_uct(child, identity)
             if child_uct > best_uct:
-                #print("utc", child_uct, "beat", best_uct)
                 next_node = child
                 best_uct = child_uct
         current_node = next_node
-    #the description does not mention the state, but it is necessary
-    #print("selected", current_node)
-    return current_node #leaf found by taking highest UCT actions
+    return current_node #"leaf" found by taking highest UCT actions
 
 
 def expand_leaf(node, board, state):
@@ -60,11 +53,9 @@ def expand_leaf(node, board, state):
     Returns:    The added child node.
 
     """
-    #print(node)#test
     new_action = node.untried_actions.pop(0)
     state = board.next_state(state, new_action)
     new_node = MCTSNode(node, new_action, board.legal_actions(state))
-    #print("new untrieds", new_node.untried_actions)
     node.child_nodes[new_action] = new_node
     return new_node
 
@@ -82,7 +73,6 @@ def rollout(board, state):
         rand_action = choice(board.legal_actions(state))
         #we follow the ouctome of that action until the end
         state = board.next_state(state, rand_action)
-    #i feel like we should return whether the state is a win or not, otherwise it doesn't make much sense
     return board.points_values(state)[1] #remember all point values are for player 1
 
 def backpropagate(node, won):
@@ -122,19 +112,10 @@ def think(board, state):
         # Start at root
         node = root_node
 
-        #print("root:", node)
-        #print("root childs", node.child_nodes)
-        #for _, child in node.child_nodes.items():
-            #print("child:", child)
-            #print("child untrieds", child.untried_actions)
-
         # Do MCTS - This is all you!
         node = traverse_nodes(node, board, sampled_game, identity_of_bot)
-        #print("post-selection node =", node)#test
-        #print("node untried", node.untried_actions)
-        selected_node = node
-        #print("node post-selection is", node)#test
         #update state with actions taken to select selected_node
+        selected_node = node
         select_actions = []
         while selected_node.parent:
             select_actions.append(selected_node.parent_action)
@@ -143,11 +124,7 @@ def think(board, state):
         for action in select_actions:
             sampled_game = board.next_state(sampled_game, action)
         #handle possible selection of terminal node
-        #print("node post state update", node)
-        #print("node untrieds post update", node.untried_actions)
         if not node.untried_actions:
-            #print("terminal selected with children", node.child_nodes)
-            #print("and untried actions", node.untried_actions)
             won = board.points_values(sampled_game)[1]
         else:
             #expand from selection
