@@ -6,11 +6,10 @@ from math import sqrt, log, inf
 num_nodes = 1000
 explore_faction = 2.
 
-id_coeff = [1, -1]
+id_coeff = [0, 1, -1]
 
 
 def calc_uct(node, identity):
-    node.visits += 1
     #determine uct rating of given node
     wins = node.wins*id_coeff[identity]
     return wins/node.visits + explore_faction*sqrt(log(node.parent.visits)/node.visits)
@@ -30,17 +29,24 @@ def traverse_nodes(node, board, state, identity):
     """
     #UCT based selection
     current_node = node
-    while not current_node.untried_actions:
+    while not current_node.untried_actions and current_node.child_nodes:
+        #print("going deeper with", current_node)
+        #print("it has", current_node.untried_actions)
         best_uct = -inf
         next_node = None
         for _, child in current_node.child_nodes.items():
+            #print("child", child)
+            #print("select child untried", child.untried_actions)
+            child.visits += 1
             child_uct = calc_uct(child, identity)
             if child_uct > best_uct:
+                #print("utc", child_uct, "beat", best_uct)
                 next_node = child
+                best_uct = child_uct
         current_node = next_node
-        sampled_game = board.next_state(state, next_node.parent_action) #incrememnt state of sim
     #the description does not mention the state, but it is necessary
-    return (current_node) #leaf found by taking highest UCT actions
+    #print("selected", current_node)
+    return current_node #leaf found by taking highest UCT actions
 
 
 def expand_leaf(node, board, state):
@@ -54,25 +60,13 @@ def expand_leaf(node, board, state):
     Returns:    The added child node.
 
     """
-
+    #print(node)#test
     new_action = node.untried_actions.pop(0)
     state = board.next_state(state, new_action)
     new_node = MCTSNode(node, new_action, board.legal_actions(state))
+    #print("new untrieds", new_node.untried_actions)
     node.child_nodes[new_action] = new_node
     return new_node
-
-
-    if node.untried_actions:
-        #print("avalible actions @", node)#test
-        new_nodes = []
-        for action in board.legal_actions(state):
-            new_state = board.next_state(state, action)
-            new_nodes.append(MCTSNode(node, action, board.legal_actions(new_state)))
-        next_node = choice(new_nodes) #select one of the new leaves at random to use
-        return next_node, new_nodes
-    else:
-        #print("no untried actions @", node)#test
-        return (None, None)
 
 
 def rollout(board, state):
@@ -128,21 +122,40 @@ def think(board, state):
         # Start at root
         node = root_node
 
+        #print("root:", node)
+        #print("root childs", node.child_nodes)
+        #for _, child in node.child_nodes.items():
+            #print("child:", child)
+            #print("child untrieds", child.untried_actions)
+
         # Do MCTS - This is all you!
-        print("before state =", sampled_game)#test
-        selected_node = traverse_nodes(node, board, sampled_game, identity_of_bot)
-        node = selected_node
+        node = traverse_nodes(node, board, sampled_game, identity_of_bot)
+        #print("post-selection node =", node)#test
+        #print("node untried", node.untried_actions)
+        selected_node = node
+        #print("node post-selection is", node)#test
+        #update state with actions taken to select selected_node
         select_actions = []
-        while node.parent:
-            select_actions.append(node.parent_action)
-            node = node.parent
+        while selected_node.parent:
+            select_actions.append(selected_node.parent_action)
+            selected_node = selected_node.parent
         select_actions.reverse()
         for action in select_actions:
             sampled_game = board.next_state(sampled_game, action)
-        node = expand_leaf(node, board, sampled_game)
-        # sampled_game = board.next_state(sampled_game, next_node.parent_action)
-        # simulate game from new node
-        won = rollout(board, sampled_game)
+        #handle possible selection of terminal node
+        #print("node post state update", node)
+        #print("node untrieds post update", node.untried_actions)
+        if not node.untried_actions:
+            #print("terminal selected with children", node.child_nodes)
+            #print("and untried actions", node.untried_actions)
+            won = board.points_values(sampled_game)[1]
+        else:
+            #expand from selection
+            node = expand_leaf(node, board, sampled_game)
+            #update simulated state
+            sampled_game = board.next_state(sampled_game, node.parent_action)
+            # simulate game from new node
+            won = rollout(board, sampled_game)
         # update tree
         backpropagate(node, won)
 
