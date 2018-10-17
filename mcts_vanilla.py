@@ -2,7 +2,7 @@ from mcts_node import MCTSNode
 from random import choice
 from math import sqrt, log, inf
 
-num_nodes = 100
+num_nodes = 1000
 explore_faction = 2.
 
 id_coeff = [0, 1, -1]

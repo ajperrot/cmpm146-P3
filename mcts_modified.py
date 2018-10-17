@@ -3,7 +3,7 @@ from random import choice
 from math import sqrt, log, inf
 
 num_nodes = 50
-explore_faction = 2.
+explore_faction = 10.
 
 id_coeff = [0, 1, -1]
 

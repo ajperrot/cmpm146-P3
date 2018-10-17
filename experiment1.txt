@@ -1,0 +1,3 @@
+In this experiment (results of which are in experiment1.png) we tested mcts_vanilla against itself at various tree sizes.
+We found that win rate generally increased with tree size, but did so with diminishing returns.
+I.E. tree size 50 vs. 100 is very bad, but 200 vs. 100 is not as great an improvement.
