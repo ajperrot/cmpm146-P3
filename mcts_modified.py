@@ -1,9 +1,10 @@
 from mcts_node import MCTSNode
 from random import choice
 from math import sqrt, log, inf
+import time
 
-num_nodes = 50
-explore_faction = 2.
+num_nodes = 100
+explore_faction = 10.
 
 id_coeff = [0, 1, -1]
 
@@ -103,8 +104,14 @@ def think(board, state):
     """
     identity_of_bot = board.current_player(state)
     root_node = MCTSNode(parent=None, parent_action=None, action_list=board.legal_actions(state))
-
+    start_time = time.time()
+    #print(time())
+    #print(start_time)
     for _ in range(num_nodes):
+        elapsed_time = time.time() - start_time
+        if elapsed_time == 1:
+            break
+        print(elapsed_time)
         # Copy the game for sampling a playthrough
         sampled_game = state
 
