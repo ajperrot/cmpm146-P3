@@ -1,9 +1,8 @@
-
 from mcts_node import MCTSNode
 from random import choice
 from math import sqrt, log, inf
 
-num_nodes = 1000
+num_nodes = 100
 explore_faction = 2.
 
 id_coeff = [0, 1, -1]
@@ -143,13 +142,12 @@ def think(board, state):
         sign = 1
     else:
         sign = -1
-    for action in board.legal_actions(state):
-        child = root_node.child_nodes[action]
+    for action, child in root_node.child_nodes.items():
         child_winrate = (child.wins/child.visits)*sign
         if child_winrate > best_winrate:
             best_action = action
             best_winrate = child_winrate
 
     #I think this is ok to leave in? rollout_bot does something similar
-    print("mcts vanilla #", identity_of_bot, "picking", best_action, "with winrate =", best_winrate)
+    #print("mcts vanilla #", identity_of_bot, "picking", best_action, "with winrate =", best_winrate)
     return best_action
