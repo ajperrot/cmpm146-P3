@@ -3,7 +3,11 @@ from random import choice
 from math import sqrt, log, inf
 import time
 
+<<<<<<< HEAD
 num_nodes = 100
+=======
+num_nodes = 50
+>>>>>>> 271e41b24f0e842bb6e2d97e4dbbd94cb4e7ebf6
 explore_faction = 10.
 
 id_coeff = [0, 1, -1]

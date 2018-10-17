@@ -1,0 +1,2 @@
+In this experiment (the results of which are in experiment2.png) we had mcts_vanilla face mcts_modified (which has a 5x higher explore factor)
+We found that the higher explore factor lead to worse play overall, but could be compensated for with a higher tree size.
