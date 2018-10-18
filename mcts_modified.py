@@ -140,7 +140,7 @@ def think(board, state):
             sampled_game = board.next_state(sampled_game, node.parent_action)
             # simulate game from new node
             sampled_game = rollout(board, sampled_game)
-            won = board.points_values(sampled_game)
+            won = board.points_values(sampled_game)[1]
         # update tree
         backpropagate(node, won)
 
