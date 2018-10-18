@@ -3,11 +3,7 @@ from random import choice
 from math import sqrt, log, inf
 import time
 
-<<<<<<< HEAD
-num_nodes = 100
-=======
-num_nodes = 50
->>>>>>> 271e41b24f0e842bb6e2d97e4dbbd94cb4e7ebf6
+num_nodes = 1000
 explore_faction = 10.
 
 id_coeff = [0, 1, -1]
@@ -77,7 +73,7 @@ def rollout(board, state):
         rand_action = choice(board.legal_actions(state))
         #we follow the ouctome of that action until the end
         state = board.next_state(state, rand_action)
-    return board.points_values(state)[1] #remember all point values are for player 1
+    return state #remember all point values are for player 1
 
 def backpropagate(node, won):
     """ Navigates the tree from a leaf node to the root, updating the win and visit count of each node along the path.
@@ -112,10 +108,11 @@ def think(board, state):
     #print(time())
     #print(start_time)
     for _ in range(num_nodes):
+        #timer for extra credit, was not used in experiments 1 and 2
         elapsed_time = time.time() - start_time
         if elapsed_time == 1:
             break
-        print(elapsed_time)
+        #print(elapsed_time)#test
         # Copy the game for sampling a playthrough
         sampled_game = state
 
@@ -142,7 +139,8 @@ def think(board, state):
             #update simulated state
             sampled_game = board.next_state(sampled_game, node.parent_action)
             # simulate game from new node
-            won = rollout(board, sampled_game)
+            sampled_game = rollout(board, sampled_game)
+            won = board.points_values(sampled_game)
         # update tree
         backpropagate(node, won)
 

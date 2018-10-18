@@ -72,7 +72,7 @@ def rollout(board, state):
         rand_action = choice(board.legal_actions(state))
         #we follow the ouctome of that action until the end
         state = board.next_state(state, rand_action)
-    return board.points_values(state)[1] #remember all point values are for player 1
+    return state #remember all point values are for player 1
 
 def backpropagate(node, won):
     """ Navigates the tree from a leaf node to the root, updating the win and visit count of each node along the path.
@@ -131,7 +131,8 @@ def think(board, state):
             #update simulated state
             sampled_game = board.next_state(sampled_game, node.parent_action)
             # simulate game from new node
-            won = rollout(board, sampled_game)
+            sampled_game = rollout(board, sampled_game)
+            won = board.points_values(sampled_game)[1]
         # update tree
         backpropagate(node, won)
 
