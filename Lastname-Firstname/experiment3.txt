@@ -1,0 +1,8 @@
+In this experiment (results of which are in experiment3.png) we tested what effect a constraint on time would have on the
+growth of the tree nodes and on the win/loss rate. Our results indicate that as the allowed time increases,
+our mcts_modified bot performs better than the mcts_vanilla bot. Additionally, we have seen that if the time 
+is set to 100ms intervals or earlier, then we can see a difference in the size of tree that was created and that 
+mcts_vanilla has a larger tree created than mcts_modified in all cases (unless the tree size is equal). 
+This was a very odd occurence, as our mcts_modified is different from our mcts_vanilla because we changed the 
+exploration factor to be 10 rather than 2, so I expected to see a larger tree from mcts_modified. Regardless,
+the results of the experiment were interesting to observe.
